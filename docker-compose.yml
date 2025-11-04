@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo:6
+    restart: always
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  backend-auth:
+    build: ./backend-auth
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb+srv://admin:admin@cluster0.x1gyy29.mongodb.net/?appName=Cluster0
+      - JWT_SECRET=mi_jwt_secreto
+      - JWT_EXPIRES=2h
+    depends_on:
+      - mongo
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000/api
+
+volumes:
+  mongo-data:
