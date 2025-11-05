@@ -1,10 +1,12 @@
-const express = require('express');
+import express from "express";
+import { register, login, me } from "../controllers/authController.js";
+import { verifyToken, verifyAdmin } from "../middleware/authMiddleware.js";
+
 const router = express.Router();
-const { register, login, me } = require('../controllers/authController');
-const auth = require('../middleware/auth');
 
-router.post('/register', register); // crear usuario (puedes limitar a admin)
-router.post('/login', login);
-router.get('/me', auth, me);
+// Rutas de autenticación
+router.post("/register", verifyToken, verifyAdmin, register);
+router.post("/login", login);
+router.get("/me", verifyToken, me);
 
-module.exports = router;
+export default router;

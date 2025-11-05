@@ -5,6 +5,8 @@ import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import OperatorDashboard from "./pages/OperatorDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AddUser from "./pages/Admin/AddUser";
+import PrivateRoute from "./components/PrivateRoute";
 
 export default function App() {
   return (
@@ -19,6 +21,14 @@ export default function App() {
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminDashboard />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/add-user"
+            element={
+              <PrivateRoute role="admin">
+                <AddUser />
+              </PrivateRoute>
             }
           />
           <Route
