@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     sentryVitePlugin({
-      org: "ucc", // el slug exacto de tu organización (en minúsculas normalmente)
+      org: "ucc-bj", // el slug exacto de tu organización (en minúsculas normalmente)
       project: "green-frontend", // el slug exacto del proyecto en Sentry
       authToken: process.env.SENTRY_AUTH_TOKEN, // definido en Vercel
       release: process.env.VERCEL_GIT_COMMIT_SHA, // 🔹 usa el commit actual de Vercel
