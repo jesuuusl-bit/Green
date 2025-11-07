@@ -8,7 +8,6 @@ import OperatorDashboard from "./pages/OperatorDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AddUser from "./pages/Admin/AddUser";
 import PrivateRoute from "./components/PrivateRoute";
-import { Analytics } from "@vercel/analytics/next"
 
 //import * as Sentry from "@sentry/react";
 //import { browserTracingIntegration, replayIntegration } from "@sentry/react";
