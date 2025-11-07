@@ -20,11 +20,17 @@ const allowedOrigins = [
 
 
 app.use(
-    cors({
-        origin: allowedOrigins,
-        methods: ["GET", "POST", "PUT", "DELETE"],
-        credentials: true,
-    })
+  cors({
+    origin: function (origin, callback) {
+      // Permite solicitudes sin 'origin' (como Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("No permitido por CORS"));
+      }
+    },
+    credentials: true,
+  })
 );
 
 app.use(express.json());
