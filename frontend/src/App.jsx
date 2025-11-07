@@ -1,12 +1,15 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { SocketProvider } from "./contexts/SocketContext"; // 🆕
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import OperatorDashboard from "./pages/OperatorDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AddUser from "./pages/Admin/AddUser";
 import PrivateRoute from "./components/PrivateRoute";
+import { Analytics } from "@vercel/analytics/next"
+
 //import * as Sentry from "@sentry/react";
 //import { browserTracingIntegration, replayIntegration } from "@sentry/react";
 
@@ -25,34 +28,36 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" />} />
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/add-user"
-            element={
-              <PrivateRoute role="admin">
-                <AddUser />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/operator"
-            element={
-              <ProtectedRoute allowedRoles={["operator", "admin"]}>
-                <OperatorDashboard />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+        <SocketProvider> {/* 🧠 Ahora toda la app tiene acceso al socket */}
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/add-user"
+              element={
+                <PrivateRoute role="admin">
+                  <AddUser />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/operator"
+              element={
+                <ProtectedRoute allowedRoles={["operator", "admin"]}>
+                  <OperatorDashboard />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

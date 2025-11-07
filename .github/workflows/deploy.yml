@@ -35,7 +35,16 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/green-backend-auth:latest
 
-      # 5️⃣ Construye y publica la imagen del frontend (opcional)
+      # 5️⃣ Construye y publica la imagen del backend-api
+      - name: Build and push backend-api
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend-api
+          file: ./backend-api/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/green-backend-api:latest
+
+      # 6️⃣ Construye y publica la imagen del frontend
       - name: Build and push frontend
         uses: docker/build-push-action@v6
         with:
@@ -44,20 +53,31 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/green-frontend:latest
 
-      # 6️⃣ Despliegue automático del backend en Render
-      - name: Trigger Render Deploy
+      # 7️⃣ Despliegue automático de los backends en Render
+      - name: Trigger Render Deploy (backend-auth)
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: |
-          echo "🚀 Desplegando backend en Render..."
-          curl -X POST https://api.render.com/v1/services/srv-d45ks5u3jp1c73dk25fg/deploys \
+          echo "🚀 Desplegando backend-auth en Render..."
+          curl -X POST https://api.render.com/v1/services/${{ secrets.RENDER_AUTH_SERVICE_ID }}/deploys \
           -H "accept: application/json" \
           -H "authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
           -d ''
 
-      # 7️⃣ Notificación de despliegue exitoso
+      - name: Trigger Render Deploy (backend-api)
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          echo "🚀 Desplegando backend-api en Render..."
+          curl -X POST https://api.render.com/v1/services/${{ secrets.RENDER_API_SERVICE_ID }}/deploys \
+          -H "accept: application/json" \
+          -H "authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+          -d ''
+
+      # 8️⃣ Notificación de despliegue exitoso
       - name: Deployment summary
         run: |
           echo "✅ Despliegue completado correctamente."
           echo "🌍 Frontend: https://green-psi-dusky.vercel.app"
-          echo "🛠 Backend: https://green-l5n5.onrender.com"
+          echo "🛠 Backend Auth: https://green-l5n5.onrender.com"
+          echo "⚙️ Backend API: (coloca aquí la URL de tu nuevo backend cuando esté creado en Render)"

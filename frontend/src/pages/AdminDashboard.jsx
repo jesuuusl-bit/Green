@@ -1,13 +1,41 @@
-import React from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { SocketContext } from "../contexts/SocketContext";
 
 export default function AdminDashboard() {
   const nav = useNavigate();
+  const socket = useContext(SocketContext); // 👈 usamos el socket global
+  const [notificaciones, setNotificaciones] = useState([]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     nav("/login");
   };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    // Escuchar cuando un operador crea una tarea o proyecto
+    socket.on("nuevaTarea", (data) => {
+      setNotificaciones((prev) => [
+        ...prev,
+        `🆕 Nueva tarea creada: ${data.title}`,
+      ]);
+    });
+
+    socket.on("nuevoProyecto", (data) => {
+      setNotificaciones((prev) => [
+        ...prev,
+        `📁 Nuevo proyecto creado: ${data.name}`,
+      ]);
+    });
+
+    // Limpieza de listeners
+    return () => {
+      socket.off("nuevaTarea");
+      socket.off("nuevoProyecto");
+    };
+  }, [socket]);
 
   return (
     <div className="d-flex vh-100">
@@ -29,7 +57,9 @@ export default function AdminDashboard() {
           <li className="nav-item mb-2">
             <button
               className="btn btn-light w-100"
-              onClick={() => alert('Aquí podrías ver reportes u otras funciones')}
+              onClick={() =>
+                alert("Aquí podrías ver reportes u otras funciones")
+              }
             >
               📊 Ver Reportes
             </button>
@@ -53,6 +83,20 @@ export default function AdminDashboard() {
         <div className="alert alert-success mt-4" role="alert">
           🌱 Sistema funcionando correctamente. Todo en orden.
         </div>
+
+        {/* 🔔 Notificaciones en tiempo real */}
+        {notificaciones.length > 0 && (
+          <div className="mt-4">
+            <h5>🔔 Notificaciones recientes:</h5>
+            <ul className="list-group mt-2">
+              {notificaciones.map((n, i) => (
+                <li key={i} className="list-group-item">
+                  {n}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

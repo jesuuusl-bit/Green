@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { io } from "socket.io-client";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,11 +12,43 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Llamada normal de login
       await login(email, password);
-      const user = JSON.parse(atob(localStorage.getItem("token").split(".")[1]));
+
+      const token = localStorage.getItem("token");
+      const user = JSON.parse(atob(token.split(".")[1]));
+
+      // 🔌 Conectar Socket.IO al backend-API (Render)
+      const socket = io("https://green-l5n5.onrender.com", {
+        auth: { token },
+      });
+
+      socket.on("connect", () => {
+        console.log("🟢 Conectado al servidor Socket:", socket.id);
+      });
+
+      // Eventos de tiempo real
+      socket.on("projectCreated", (project) => {
+        console.log("📢 Nuevo proyecto:", project);
+      });
+
+      socket.on("taskCreated", (task) => {
+        console.log("📝 Nueva tarea:", task);
+      });
+
+      socket.on("taskUpdated", (task) => {
+        console.log("♻️ Tarea actualizada:", task);
+      });
+
+      // Guardar socket en window o contexto global si quieres usarlo luego
+      window.socket = socket;
+
+      // Redirigir según rol
       if (user.role === "admin") nav("/admin");
       else nav("/operator");
+
     } catch (err) {
+      console.error("❌ Error al iniciar sesión:", err);
       alert("Error de login. Verifica tus credenciales.");
     }
   };
