@@ -1,40 +1,39 @@
-import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
-import { connectDB } from "./config/db.js";
-//imports de rutas
-import authRoutes from "./routes/auth.js";
+import dotenv from "dotenv";
+import connectDB from "./config/db.js";
 
 dotenv.config();
-
 const app = express();
-
-//conexxion base de datos
 connectDB();
 
-//configuracion de CORS
+// 🧠 Configuración de CORS
 const allowedOrigins = [
-  "http://localhost:5173", // para desarrollo local
-  "https://green-psi-dusky.vercel.app", // tu frontend en producción
+  "https://green-psi-dusky.vercel.app", // frontend en vercel
+  "http://localhost:5173",               // para desarrollo local
 ];
-
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Permite solicitudes sin 'origin' (como Postman)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("No permitido por CORS"));
+        callback(new Error("CORS not allowed"));
       }
     },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
 
+// Esto evita que el preflight falle
+app.options("*", cors());
+
 app.use(express.json());
-//rutas
+
+// Rutas
+import authRoutes from "./routes/auth.js";
 app.use("/api/auth", authRoutes);
 
 //puertos
