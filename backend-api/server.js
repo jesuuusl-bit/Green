@@ -6,6 +6,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import taskRoutes from "./routes/taskRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
+import "./models/User.js";
 
 dotenv.config();
 
