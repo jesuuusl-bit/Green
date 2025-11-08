@@ -1,93 +1,161 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { SocketContext } from "../contexts/SocketContext";
 
 export default function AdminDashboard() {
   const nav = useNavigate();
-  const socket = useContext(SocketContext); // 👈 usamos el socket global
+  const socket = useContext(SocketContext);
+  const API_URL = "https://green-api.onrender.com/api";
+
+  const [proyectos, setProyectos] = useState([]);
+  const [nuevoProyecto, setNuevoProyecto] = useState("");
   const [notificaciones, setNotificaciones] = useState([]);
+
+  useEffect(() => {
+    cargarProyectos();
+
+    if (socket) {
+      socket.on("tareaCompletada", (data) => {
+        setNotificaciones((prev) => [
+          ...prev,
+          `✅ ${data.operator || "Un operador"} completó la tarea: ${data.tarea}`,
+        ]);
+      });
+    }
+
+    return () => {
+      socket?.off("tareaCompletada");
+    };
+  }, [socket]);
+
+  // 🔹 Cargar proyectos actuales
+  const cargarProyectos = async () => {
+    try {
+      const res = await fetch(`${API_URL}/projects`);
+      const data = await res.json();
+      setProyectos(data);
+    } catch (error) {
+      console.error("❌ Error al cargar proyectos:", error);
+    }
+  };
+
+  // 🔹 Crear nuevo proyecto
+  const crearProyecto = async () => {
+    if (!nuevoProyecto.trim()) return alert("Por favor ingresa un nombre.");
+
+    try {
+      const res = await fetch(`${API_URL}/projects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: nuevoProyecto }),
+      });
+
+      if (res.ok) {
+        setNuevoProyecto("");
+        cargarProyectos();
+        socket?.emit("nuevoProyecto", { name: nuevoProyecto });
+      } else {
+        alert("❌ Error al crear el proyecto.");
+      }
+    } catch (error) {
+      console.error("❌ Error al crear proyecto:", error);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     nav("/login");
   };
 
-  useEffect(() => {
-    if (!socket) return;
-
-    // Escuchar cuando un operador crea una tarea o proyecto
-    socket.on("nuevaTarea", (data) => {
-      setNotificaciones((prev) => [
-        ...prev,
-        `🆕 Nueva tarea creada: ${data.title}`,
-      ]);
-    });
-
-    socket.on("nuevoProyecto", (data) => {
-      setNotificaciones((prev) => [
-        ...prev,
-        `📁 Nuevo proyecto creado: ${data.name}`,
-      ]);
-    });
-
-    // Limpieza de listeners
-    return () => {
-      socket.off("nuevaTarea");
-      socket.off("nuevoProyecto");
-    };
-  }, [socket]);
-
   return (
-    <div className="d-flex vh-100">
+    <div className="d-flex vh-100 bg-light">
       {/* Sidebar */}
-      <div
-        className="bg-success text-white p-3"
-        style={{ width: "250px", minHeight: "100vh" }}
+      <aside
+        className="bg-success text-white p-3 d-flex flex-column justify-content-between"
+        style={{ width: "260px" }}
       >
-        <h4 className="text-center mb-4">Panel Admin</h4>
-        <ul className="nav flex-column">
-          <li className="nav-item mb-2">
-            <button
-              className="btn btn-light w-100"
-              onClick={() => nav("/admin/add-user")}
-            >
-              ➕ Agregar Usuario
-            </button>
-          </li>
-          <li className="nav-item mb-2">
-            <button
-              className="btn btn-light w-100"
-              onClick={() =>
-                alert("Aquí podrías ver reportes u otras funciones")
-              }
-            >
-              📊 Ver Reportes
-            </button>
-          </li>
-          <li className="nav-item mt-4">
-            <button className="btn btn-danger w-100" onClick={handleLogout}>
-              🔒 Cerrar Sesión
-            </button>
-          </li>
-        </ul>
-      </div>
+        <div>
+          <h4 className="text-center mb-4">Panel Admin</h4>
+          <button
+            className="btn btn-light w-100 mb-3"
+            onClick={() => nav("/admin/add-user")}
+          >
+            ➕ Agregar Usuario
+          </button>
+          <button
+            className="btn btn-light w-100 mb-3"
+            onClick={() => nav("/admin/reports")}
+          >
+            📊 Ver Reportes
+          </button>
+        </div>
+        <button className="btn btn-danger w-100 mt-4" onClick={handleLogout}>
+          🔒 Cerrar Sesión
+        </button>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-grow-1 p-5 bg-light">
-        <h2 className="text-success">Bienvenido, Administrador 👋</h2>
-        <p className="lead mt-3">
-          Desde este panel puedes gestionar usuarios, revisar reportes y
-          supervisar las operaciones de GreenTech.
-        </p>
-        <hr />
-        <div className="alert alert-success mt-4" role="alert">
-          🌱 Sistema funcionando correctamente. Todo en orden.
-        </div>
+      <main className="flex-grow-1 p-5 overflow-auto">
+        <header className="mb-4">
+          <h2 className="text-success fw-bold">
+            👋 Bienvenido, Administrador
+          </h2>
+          <p className="text-muted">
+            Gestiona los proyectos, asigna tareas y monitorea el progreso de tu
+            equipo en tiempo real.
+          </p>
+        </header>
 
-        {/* 🔔 Notificaciones en tiempo real */}
+        {/* Crear Proyecto */}
+        <section className="card p-3 mb-4 shadow-sm border-0">
+          <h5 className="text-success mb-2 fw-bold">📁 Crear nuevo proyecto</h5>
+          <div className="d-flex mt-2">
+            <input
+              type="text"
+              placeholder="Nombre del proyecto"
+              value={nuevoProyecto}
+              onChange={(e) => setNuevoProyecto(e.target.value)}
+              className="form-control me-2"
+            />
+            <button className="btn btn-success" onClick={crearProyecto}>
+              Crear
+            </button>
+          </div>
+        </section>
+
+        {/* Listado de Proyectos */}
+        <section>
+          <h5 className="mb-3 fw-bold">📂 Proyectos actuales</h5>
+          {proyectos.length === 0 ? (
+            <div className="alert alert-secondary">
+              No hay proyectos registrados aún.
+            </div>
+          ) : (
+            <div className="row">
+              {proyectos.map((p) => (
+                <div key={p._id} className="col-md-4 mb-4">
+                  <div className="card shadow-sm p-3 h-100 border-0">
+                    <h6 className="fw-bold text-success">{p.name}</h6>
+                    <p className="text-muted small mb-2">
+                      {p.tareas?.length || 0} tareas asignadas
+                    </p>
+                    <button
+                      className="btn btn-outline-success btn-sm"
+                      onClick={() => nav(`/admin/project/${p._id}`)}
+                    >
+                      Ver Detalles
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Notificaciones */}
         {notificaciones.length > 0 && (
-          <div className="mt-4">
-            <h5>🔔 Notificaciones recientes:</h5>
+          <section className="mt-4">
+            <h5 className="fw-bold text-success">🔔 Actividad reciente</h5>
             <ul className="list-group mt-2">
               {notificaciones.map((n, i) => (
                 <li key={i} className="list-group-item">
@@ -95,9 +163,9 @@ export default function AdminDashboard() {
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
         )}
-      </div>
+      </main>
     </div>
   );
 }

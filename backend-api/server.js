@@ -6,6 +6,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import taskRoutes from "./routes/taskRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
+import evidenceRoutes from "./routes/evidenceRoutes.js";
 
 dotenv.config();
 
@@ -25,6 +26,8 @@ app.use(
     credentials: true,
   })
 );
+
+app.use("/api/evidencias", evidenceRoutes);
 
 // ✅ Asegurar preflight responses para CORS
 app.options("*", cors());

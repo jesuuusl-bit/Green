@@ -1,176 +1,136 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useEffect, useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { SocketContext } from "../contexts/SocketContext";
+import EvidenceUploader from "../components/EvidenceUploader";
 
 export default function OperatorDashboard() {
+  const nav = useNavigate();
   const socket = useContext(SocketContext);
+  const [proyectos, setProyectos] = useState([]);
 
-  const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [formTask, setFormTask] = useState({ title: "", description: "" });
-  const [formProject, setFormProject] = useState({
-    name: "",
-    description: "",
-  });
+  const API_URL = "https://green-api.onrender.com/api";
 
-  // Escucha en tiempo real los nuevos elementos
   useEffect(() => {
-    socket.on("nuevaTarea", (data) => {
-      setTasks((prev) => [data, ...prev]);
-    });
+    cargarProyectos();
 
-    socket.on("nuevoProyecto", (data) => {
-      setProjects((prev) => [data, ...prev]);
-    });
+    if (socket) {
+      socket.on("actualizacionProyecto", () => cargarProyectos());
+    }
 
     return () => {
-      socket.off("nuevaTarea");
-      socket.off("nuevoProyecto");
+      socket?.off("actualizacionProyecto");
     };
   }, [socket]);
 
-  // Cargar datos iniciales desde el backend
-  useEffect(() => {
-    fetch("https://green-api.onrender.com/api/tasks")
-      .then((res) => res.json())
-      .then(setTasks)
-      .catch(() => console.warn("No se pudieron cargar las tareas"));
-
-    fetch("https://green-api.onrender.com/api/projects")
-      .then((res) => res.json())
-      .then(setProjects)
-      .catch(() => console.warn("No se pudieron cargar los proyectos"));
-  }, []);
-
-  // Crear tarea
-  const handleTaskSubmit = async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem("token");
-    await fetch("https://green-api.onrender.com/api/tasks", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        ...formTask,
-        createdBy: "Operador", // opcionalmente obtén el nombre real del usuario
-      }),
-    });
-    setFormTask({ title: "", description: "" });
+  // 🔹 Cargar proyectos con tareas asignadas
+  const cargarProyectos = async () => {
+    try {
+      const res = await fetch(`${API_URL}/projects`);
+      const data = await res.json();
+      setProyectos(data);
+    } catch (error) {
+      console.error("❌ Error al cargar proyectos:", error);
+    }
   };
 
-  // Crear proyecto
-  const handleProjectSubmit = async (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem("token");
-    await fetch("https://green-api.onrender.com/api/projects", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        ...formProject,
-        createdBy: "Operador",
-      }),
-    });
-    setFormProject({ name: "", description: "" });
+  // 🔹 Completar tarea con evidencia
+  const completarTarea = async (projectId, tareaId, evidencia) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", evidencia);
+      formData.append("tareaId", tareaId);
+      formData.append("projectId", projectId);
+
+      const res = await fetch(`${API_URL}/tasks/complete`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        alert("✅ Tarea completada y evidencia enviada correctamente.");
+        socket?.emit("tareaCompletada", { tareaId, projectId });
+        cargarProyectos();
+      } else {
+        alert("❌ Error al completar la tarea.");
+      }
+    } catch (error) {
+      console.error("❌ Error al enviar evidencia:", error);
+    }
+  };
+
+  // 🔹 Cerrar sesión
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    nav("/login");
   };
 
   return (
-    <div className="container mt-5">
-      <h2 className="text-success text-center mb-4">
-        Panel del Operador 🌿
-      </h2>
-
-      <div className="row">
-        {/* Crear tarea */}
-        <div className="col-md-6">
-          <div className="card p-3 shadow">
-            <h5 className="text-success">📋 Crear nueva tarea</h5>
-            <form onSubmit={handleTaskSubmit}>
-              <input
-                type="text"
-                placeholder="Título"
-                className="form-control mb-2"
-                value={formTask.title}
-                onChange={(e) =>
-                  setFormTask({ ...formTask, title: e.target.value })
-                }
-                required
-              />
-              <textarea
-                placeholder="Descripción"
-                className="form-control mb-2"
-                value={formTask.description}
-                onChange={(e) =>
-                  setFormTask({ ...formTask, description: e.target.value })
-                }
-              />
-              <button className="btn btn-success w-100">Crear Tarea</button>
-            </form>
-          </div>
-        </div>
-
-        {/* Crear proyecto */}
-        <div className="col-md-6">
-          <div className="card p-3 shadow">
-            <h5 className="text-success">🏗️ Crear nuevo proyecto</h5>
-            <form onSubmit={handleProjectSubmit}>
-              <input
-                type="text"
-                placeholder="Nombre del proyecto"
-                className="form-control mb-2"
-                value={formProject.name}
-                onChange={(e) =>
-                  setFormProject({ ...formProject, name: e.target.value })
-                }
-                required
-              />
-              <textarea
-                placeholder="Descripción"
-                className="form-control mb-2"
-                value={formProject.description}
-                onChange={(e) =>
-                  setFormProject({
-                    ...formProject,
-                    description: e.target.value,
-                  })
-                }
-              />
-              <button className="btn btn-success w-100">
-                Crear Proyecto
-              </button>
-            </form>
-          </div>
-        </div>
+    <div className="d-flex vh-100 bg-light">
+      {/* Sidebar */}
+      <div className="bg-success text-white p-3" style={{ width: "260px" }}>
+        <h4 className="text-center mb-4">Panel del Operador</h4>
+        <button className="btn btn-danger w-100 mt-4" onClick={handleLogout}>
+          🔒 Cerrar Sesión
+        </button>
       </div>
 
-      <hr className="my-4" />
+      {/* Main Content */}
+      <div className="flex-grow-1 p-5 overflow-auto">
+        <h2 className="text-success fw-bold">👷 Bienvenido, Operador</h2>
+        <p className="text-muted">Gestiona tus tareas y sube evidencias.</p>
 
-      {/* Listas en tiempo real */}
-      <div className="row">
-        <div className="col-md-6">
-          <h5>🟢 Tareas</h5>
-          <ul className="list-group">
-            {tasks.map((t, i) => (
-              <li key={i} className="list-group-item">
-                <strong>{t.title}</strong> — {t.description}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {proyectos.map((p) => (
+          <div key={p._id} className="card mb-4 shadow-sm p-3">
+            <h5 className="fw-bold text-success">{p.name}</h5>
+            <p className="text-muted">{p.descripcion || "Sin descripción."}</p>
 
-        <div className="col-md-6">
-          <h5>🔵 Proyectos</h5>
-          <ul className="list-group">
-            {projects.map((p, i) => (
-              <li key={i} className="list-group-item">
-                <strong>{p.name}</strong> — {p.description}
-              </li>
-            ))}
-          </ul>
-        </div>
+            <ul className="list-group mt-2">
+              {p.tareas && p.tareas.length > 0 ? (
+                p.tareas.map((t) => (
+                  <li
+                    key={t._id}
+                    className="list-group-item d-flex justify-content-between align-items-center flex-wrap"
+                  >
+                    <div>
+                      <strong>{t.titulo}</strong>
+                      <br />
+                      <small className="text-muted">
+                        {t.completada ? "Completada" : "Pendiente"}
+                      </small>
+                    </div>
+
+                    {!t.completada ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const file = e.target.elements.file.files[0];
+                          completarTarea(p._id, t._id, file);
+                        }}
+                        className="d-flex align-items-center mt-2 mt-md-0"
+                      >
+                        <input
+                          type="file"
+                          name="file"
+                          className="form-control form-control-sm me-2"
+                          required
+                        />
+                        <button type="submit" className="btn btn-success btn-sm">
+                          📤 Enviar Evidencia
+                        </button>
+                      </form>
+                    ) : (
+                      <span className="badge bg-success">✅ Completada</span>
+                    )}
+                  </li>
+                ))
+              ) : (
+                <li className="list-group-item text-muted">
+                  No hay tareas asignadas.
+                </li>
+              )}
+            </ul>
+          </div>
+        ))}
       </div>
     </div>
   );

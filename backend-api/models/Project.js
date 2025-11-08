@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
 
-const ProjectSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: { type: String },
-  createdBy: { type: String }, // operador o admin que lo crea
-  createdAt: { type: Date, default: Date.now },
-});
+const projectSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    description: { type: String },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // admin
+    tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
+  },
+  { timestamps: true }
+);
 
-export default mongoose.model("Project", ProjectSchema);
+export default mongoose.model("Project", projectSchema);

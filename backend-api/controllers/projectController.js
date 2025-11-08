@@ -1,30 +1,24 @@
-import Project from '../models/Project.js';
+import Project from "../models/Project.js";
 
 export const createProject = async (req, res) => {
   try {
-    const { title, description } = req.body;
     const project = new Project({
-      title, description, createdBy: req.user.id
+      name: req.body.name,
+      description: req.body.description,
+      createdBy: req.user.id,
     });
-    const saved = await project.save();
-
-    // Emitir evento via socket: obtenemos io desde app
-    const io = req.app.get('io');
-    io.emit('projectCreated', saved);
-
-    res.json(saved);
+    await project.save();
+    res.status(201).json(project);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ message: "Error al crear el proyecto" });
   }
 };
 
-export const listProjects = async (req, res) => {
+export const getProjects = async (req, res) => {
   try {
-    const projects = await Project.find().populate('createdBy', 'name email');
+    const projects = await Project.find().populate("createdBy", "name email");
     res.json(projects);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ message: "Error al obtener proyectos" });
   }
 };
