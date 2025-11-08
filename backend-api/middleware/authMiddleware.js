@@ -1,19 +1,30 @@
-import express from "express";
-import dotenv from "dotenv";
-import cors from "cors";
-import connectDB from "./config/db.js";
-import projectRoutes from "./routes/projectRoutes.js";
-import taskRoutes from "./routes/taskRoutes.js";
+import jwt from "jsonwebtoken";
 
-dotenv.config();
-connectDB();
+export const protect = (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-const app = express();
-app.use(cors({ origin: "*" }));
-app.use(express.json());
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No autorizado, token no enviado" });
+  }
 
-app.use("/api/projects", projectRoutes);
-app.use("/api/tasks", taskRoutes);
+  const token = authHeader.split(" ")[1];
 
-const PORT = process.env.PORT || 6000;
-app.listen(PORT, () => console.log(`API service running on ${PORT}`));
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // guarda los datos del usuario (id, rol, etc.)
+    next();
+  } catch (error) {
+    console.error("❌ Token inválido:", error);
+    res.status(401).json({ error: "Token inválido o expirado" });
+  }
+};
+
+// 🔹 Middleware opcional para verificar si es administrador
+export const isAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== "admin") {
+    return res
+      .status(403)
+      .json({ error: "Acceso denegado. Solo administradores pueden realizar esta acción." });
+  }
+  next();
+};

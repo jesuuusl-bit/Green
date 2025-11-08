@@ -6,7 +6,7 @@ export const SocketContext = createContext();
 
 // 👉 Conecta con tu backend-API actualizado en Render
 const socket = io("https://green-1-kjes.onrender.com", {
-  transports: ["websocket"],
+  transports: ["websocket","polling"],
 });
 
 export const SocketProvider = ({ children }) => {

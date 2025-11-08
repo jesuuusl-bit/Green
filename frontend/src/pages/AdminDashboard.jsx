@@ -26,9 +26,13 @@ export default function AdminDashboard() {
     return () => socket?.off("tareaCompletada");
   }, [socket]);
 
+  // 🔹 Cargar proyectos
   const cargarProyectos = async () => {
     try {
-      const res = await fetch(`${API_URL}/projects`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/projects`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       setProyectos(data);
     } catch (error) {
@@ -36,20 +40,30 @@ export default function AdminDashboard() {
     }
   };
 
+  // 🔹 Crear nuevo proyecto
   const crearProyecto = async () => {
     if (!nuevoProyecto.trim()) return alert("Por favor ingresa un nombre.");
+
     try {
+      const token = localStorage.getItem("token");
+      if (!token) return alert("No estás autenticado.");
+
       const res = await fetch(`${API_URL}/projects`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ name: nuevoProyecto }),
       });
+
       if (res.ok) {
         setNuevoProyecto("");
         cargarProyectos();
         socket?.emit("nuevoProyecto", { name: nuevoProyecto });
       } else {
-        alert("❌ Error al crear el proyecto.");
+        const err = await res.json();
+        alert(`❌ Error: ${err.error || "No se pudo crear el proyecto."}`);
       }
     } catch (error) {
       console.error("❌ Error al crear proyecto:", error);
@@ -63,6 +77,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="d-flex vh-100 bg-light">
+      {/* Sidebar */}
       <aside
         className="bg-success text-white p-3 d-flex flex-column justify-content-between"
         style={{ width: "260px" }}
@@ -87,12 +102,14 @@ export default function AdminDashboard() {
         </button>
       </aside>
 
+      {/* Main Content */}
       <main className="flex-grow-1 p-5 overflow-auto">
         <h2 className="text-success fw-bold">👋 Bienvenido, Administrador</h2>
         <p className="text-muted">
           Gestiona los proyectos, asigna tareas y monitorea el progreso en tiempo real.
         </p>
 
+        {/* Crear proyecto */}
         <section className="card p-3 mb-4 shadow-sm border-0">
           <h5 className="text-success mb-2 fw-bold">📁 Crear nuevo proyecto</h5>
           <div className="d-flex mt-2">
@@ -109,6 +126,7 @@ export default function AdminDashboard() {
           </div>
         </section>
 
+        {/* Lista de proyectos */}
         <section>
           <h5 className="mb-3 fw-bold">📂 Proyectos actuales</h5>
           {proyectos.length === 0 ? (
@@ -135,6 +153,7 @@ export default function AdminDashboard() {
           )}
         </section>
 
+        {/* Notificaciones */}
         {notificaciones.length > 0 && (
           <section className="mt-4">
             <h5 className="fw-bold text-success">🔔 Actividad reciente</h5>

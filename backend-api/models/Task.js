@@ -2,19 +2,38 @@ import mongoose from "mongoose";
 
 const taskSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },
-    description: { type: String },
-    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // operador
+    title: {
+      type: String,
+      required: [true, "El título de la tarea es obligatorio"],
+    },
+    description: {
+      type: String,
+    },
     status: {
       type: String,
       enum: ["pendiente", "en progreso", "completada"],
       default: "pendiente",
     },
-    evidenceUrl: { type: String }, // link o ruta del archivo
-    completedAt: { type: Date },
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+      required: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    completedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    evidence: {
+      type: String, // puede ser una URL o base64
+    },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Task", taskSchema);
+const Task = mongoose.model("Task", taskSchema);
+export default Task;
