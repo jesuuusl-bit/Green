@@ -11,41 +11,58 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+
+// 🔧 Configuración correcta de CORS
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://green-psi-dusky.vercel.app", // Frontend en Vercel
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
+
+// ✅ Asegurar preflight responses para CORS
+app.options("*", cors());
+
+// 🧠 JSON parser
+app.use(express.json());
+
+// 🔌 Configuración de Socket.io con CORS igual
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://green-psi-dusky.vercel.app", // ✅ tu frontend en Vercel
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
   },
 });
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
-
-// MongoDB conexión
+// 🧩 Conexión a MongoDB
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB conectado en backend-api"))
   .catch((err) => console.error("❌ Error MongoDB:", err));
 
-// Routes
+// 🧭 Rutas
 app.use("/api/tasks", taskRoutes(io));
 app.use("/api/projects", projectRoutes(io));
 
-// Socket.io conexión
+// 🌐 Endpoint base
+app.get("/", (req, res) => {
+  res.send("🟢 Green API corriendo correctamente 🚀");
+});
+
+// 🧠 Eventos de Socket.io
 io.on("connection", (socket) => {
   console.log("🟢 Cliente conectado:", socket.id);
-
   socket.on("disconnect", () => {
     console.log("🔴 Cliente desconectado:", socket.id);
   });
 });
 
+// 🚀 Iniciar servidor
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => console.log(`🚀 API corriendo en puerto ${PORT}`));
