@@ -1,11 +1,9 @@
 import React, { createContext, useEffect } from "react";
 import { io } from "socket.io-client";
 
-// 👉 Crea el contexto
 export const SocketContext = createContext();
 
-// 👉 Conecta con tu backend API (Render)
-const socket = io("https://green-api.onrender.com", {
+const socket = io(import.meta.env.VITE_SOCKET_URL, {
   transports: ["websocket"],
 });
 

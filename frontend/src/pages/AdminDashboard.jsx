@@ -5,7 +5,7 @@ import { SocketContext } from "../contexts/SocketContext";
 export default function AdminDashboard() {
   const nav = useNavigate();
   const socket = useContext(SocketContext);
-  const API_URL = "https://green-api.onrender.com/api";
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const [proyectos, setProyectos] = useState([]);
   const [nuevoProyecto, setNuevoProyecto] = useState("");
@@ -23,12 +23,9 @@ export default function AdminDashboard() {
       });
     }
 
-    return () => {
-      socket?.off("tareaCompletada");
-    };
+    return () => socket?.off("tareaCompletada");
   }, [socket]);
 
-  // 🔹 Cargar proyectos actuales
   const cargarProyectos = async () => {
     try {
       const res = await fetch(`${API_URL}/projects`);
@@ -39,17 +36,14 @@ export default function AdminDashboard() {
     }
   };
 
-  // 🔹 Crear nuevo proyecto
   const crearProyecto = async () => {
     if (!nuevoProyecto.trim()) return alert("Por favor ingresa un nombre.");
-
     try {
       const res = await fetch(`${API_URL}/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: nuevoProyecto }),
       });
-
       if (res.ok) {
         setNuevoProyecto("");
         cargarProyectos();
@@ -69,7 +63,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="d-flex vh-100 bg-light">
-      {/* Sidebar */}
       <aside
         className="bg-success text-white p-3 d-flex flex-column justify-content-between"
         style={{ width: "260px" }}
@@ -94,19 +87,12 @@ export default function AdminDashboard() {
         </button>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-grow-1 p-5 overflow-auto">
-        <header className="mb-4">
-          <h2 className="text-success fw-bold">
-            👋 Bienvenido, Administrador
-          </h2>
-          <p className="text-muted">
-            Gestiona los proyectos, asigna tareas y monitorea el progreso de tu
-            equipo en tiempo real.
-          </p>
-        </header>
+        <h2 className="text-success fw-bold">👋 Bienvenido, Administrador</h2>
+        <p className="text-muted">
+          Gestiona los proyectos, asigna tareas y monitorea el progreso en tiempo real.
+        </p>
 
-        {/* Crear Proyecto */}
         <section className="card p-3 mb-4 shadow-sm border-0">
           <h5 className="text-success mb-2 fw-bold">📁 Crear nuevo proyecto</h5>
           <div className="d-flex mt-2">
@@ -123,13 +109,10 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        {/* Listado de Proyectos */}
         <section>
           <h5 className="mb-3 fw-bold">📂 Proyectos actuales</h5>
           {proyectos.length === 0 ? (
-            <div className="alert alert-secondary">
-              No hay proyectos registrados aún.
-            </div>
+            <div className="alert alert-secondary">No hay proyectos aún.</div>
           ) : (
             <div className="row">
               {proyectos.map((p) => (
@@ -152,7 +135,6 @@ export default function AdminDashboard() {
           )}
         </section>
 
-        {/* Notificaciones */}
         {notificaciones.length > 0 && (
           <section className="mt-4">
             <h5 className="fw-bold text-success">🔔 Actividad reciente</h5>

@@ -1,28 +1,20 @@
 import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { SocketContext } from "../contexts/SocketContext";
-import EvidenceUploader from "../components/EvidenceUploader";
 
 export default function OperatorDashboard() {
   const nav = useNavigate();
   const socket = useContext(SocketContext);
-  const [proyectos, setProyectos] = useState([]);
+  const API_URL = import.meta.env.VITE_API_URL;
 
-  const API_URL = "https://green-api.onrender.com/api";
+  const [proyectos, setProyectos] = useState([]);
 
   useEffect(() => {
     cargarProyectos();
-
-    if (socket) {
-      socket.on("actualizacionProyecto", () => cargarProyectos());
-    }
-
-    return () => {
-      socket?.off("actualizacionProyecto");
-    };
+    socket?.on("actualizacionProyecto", cargarProyectos);
+    return () => socket?.off("actualizacionProyecto");
   }, [socket]);
 
-  // 🔹 Cargar proyectos con tareas asignadas
   const cargarProyectos = async () => {
     try {
       const res = await fetch(`${API_URL}/projects`);
@@ -33,7 +25,6 @@ export default function OperatorDashboard() {
     }
   };
 
-  // 🔹 Completar tarea con evidencia
   const completarTarea = async (projectId, tareaId, evidencia) => {
     try {
       const formData = new FormData();
@@ -47,7 +38,7 @@ export default function OperatorDashboard() {
       });
 
       if (res.ok) {
-        alert("✅ Tarea completada y evidencia enviada correctamente.");
+        alert("✅ Tarea completada y evidencia enviada.");
         socket?.emit("tareaCompletada", { tareaId, projectId });
         cargarProyectos();
       } else {
@@ -58,7 +49,6 @@ export default function OperatorDashboard() {
     }
   };
 
-  // 🔹 Cerrar sesión
   const handleLogout = () => {
     localStorage.removeItem("token");
     nav("/login");
@@ -66,7 +56,6 @@ export default function OperatorDashboard() {
 
   return (
     <div className="d-flex vh-100 bg-light">
-      {/* Sidebar */}
       <div className="bg-success text-white p-3" style={{ width: "260px" }}>
         <h4 className="text-center mb-4">Panel del Operador</h4>
         <button className="btn btn-danger w-100 mt-4" onClick={handleLogout}>
@@ -74,7 +63,6 @@ export default function OperatorDashboard() {
         </button>
       </div>
 
-      {/* Main Content */}
       <div className="flex-grow-1 p-5 overflow-auto">
         <h2 className="text-success fw-bold">👷 Bienvenido, Operador</h2>
         <p className="text-muted">Gestiona tus tareas y sube evidencias.</p>
@@ -82,10 +70,8 @@ export default function OperatorDashboard() {
         {proyectos.map((p) => (
           <div key={p._id} className="card mb-4 shadow-sm p-3">
             <h5 className="fw-bold text-success">{p.name}</h5>
-            <p className="text-muted">{p.descripcion || "Sin descripción."}</p>
-
             <ul className="list-group mt-2">
-              {p.tareas && p.tareas.length > 0 ? (
+              {p.tareas?.length > 0 ? (
                 p.tareas.map((t) => (
                   <li
                     key={t._id}

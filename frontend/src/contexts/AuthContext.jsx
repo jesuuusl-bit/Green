@@ -7,7 +7,9 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Carga el usuario desde el backend si hay token guardado
+  // URL base del backend-auth
+  const AUTH_API = import.meta.env.VITE_AUTH_API_URL;
+
   const loadUser = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -15,8 +17,12 @@ export const AuthProvider = ({ children }) => {
       return;
     }
     try {
-      const res = await api.get("/auth/me");
-      setUser(res.data);
+      const res = await fetch(`${AUTH_API}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Error al cargar usuario");
+      const data = await res.json();
+      setUser(data);
     } catch (err) {
       localStorage.removeItem("token");
       setUser(null);
@@ -29,14 +35,17 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, []);
 
-  // Inicia sesión
   const login = async (email, password) => {
-    const res = await api.post("/auth/login", { email, password });
-    localStorage.setItem("token", res.data.token);
-    setUser(res.data.user);
+    const res = await fetch(`${AUTH_API}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    localStorage.setItem("token", data.token);
+    setUser(data.user);
   };
 
-  // Cierra sesión
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
