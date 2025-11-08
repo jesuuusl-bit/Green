@@ -8,16 +8,15 @@ dotenv.config();
 const app = express();
 connectDB();
 
-// 🧠 CORS CONFIG (permitir todas las rutas del frontend y localhost)
-const allowedOrigins = [
-  "https://green-hwvzkw401-jesuuusl-bits-projects.vercel.app",
-  "https://green-psi-dusky.vercel.app",
-  "http://localhost:5173",
-];
+// ✅ Configuración CORS flexible
+const allowedOrigins = ["http://localhost:5173"];
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
+  if (
+    allowedOrigins.includes(origin) ||
+    (origin && origin.includes("vercel.app"))
+  ) {
     res.header("Access-Control-Allow-Origin", origin);
   }
   res.header(
@@ -31,14 +30,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Manejamos OPTIONS para evitar bloqueo de preflight
-app.options("*", (req, res) => {
-  res.sendStatus(200);
-});
+// Evitar error de preflight
+app.options("*", (req, res) => res.sendStatus(200));
 
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 
-//puerto
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, "0.0.0.0", () => console.log(`Auth service running on ${PORT}`));
+app.listen(PORT, "0.0.0.0", () =>
+  console.log(`✅ Auth service running on port ${PORT}`)
+);
