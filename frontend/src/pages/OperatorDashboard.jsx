@@ -17,7 +17,19 @@ export default function OperatorDashboard() {
 
   const cargarProyectos = async () => {
     try {
-      const res = await fetch(`${API_URL}/projects`);
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${API_URL}/projects`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401) {
+        console.error("⚠️ No autorizado, el token es inválido o falta.");
+        return;
+      }
+
       const data = await res.json();
       setProyectos(data);
     } catch (error) {
