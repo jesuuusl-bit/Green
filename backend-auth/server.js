@@ -10,6 +10,7 @@ connectDB();
 
 // 🧠 CORS CONFIG (permitir todas las rutas del frontend y localhost)
 const allowedOrigins = [
+  "https://green-hwvzkw401-jesuuusl-bits-projects.vercel.app",
   "https://green-psi-dusky.vercel.app",
   "http://localhost:5173",
 ];
