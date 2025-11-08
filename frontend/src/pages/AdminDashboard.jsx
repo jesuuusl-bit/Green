@@ -41,34 +41,38 @@ export default function AdminDashboard() {
   };
 
   // 🔹 Crear nuevo proyecto
-  const crearProyecto = async () => {
-    if (!nuevoProyecto.trim()) return alert("Por favor ingresa un nombre.");
+const crearProyecto = async () => {
+  if (!nuevoProyecto.trim()) return alert("Por favor ingresa un nombre.");
 
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return alert("No estás autenticado.");
+  try {
+    const res = await fetch(`${API_URL}/projects`, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({ name: nuevoProyecto }),
+    });
 
-      const res = await fetch(`${API_URL}/projects`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name: nuevoProyecto }),
-      });
-
-      if (res.ok) {
-        setNuevoProyecto("");
-        cargarProyectos();
-        socket?.emit("nuevoProyecto", { name: nuevoProyecto });
-      } else {
-        const err = await res.json();
-        alert(`❌ Error: ${err.error || "No se pudo crear el proyecto."}`);
-      }
-    } catch (error) {
-      console.error("❌ Error al crear proyecto:", error);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("❌ Error del backend:", errorText);
+      return alert("Error al crear el proyecto. Revisa la consola.");
     }
-  };
+
+    // Esperar respuesta JSON del backend
+    const nuevo = await res.json();
+    console.log("✅ Proyecto creado:", nuevo);
+
+    // Actualizar la lista local sin romper la UI
+    setProyectos((prev) => [...prev, nuevo]);
+    setNuevoProyecto("");
+    socket?.emit("nuevoProyecto", { name: nuevo.name });
+  } catch (error) {
+    console.error("❌ Error al crear proyecto:", error);
+    alert("Error al conectar con el servidor.");
+  }
+};
 
   const handleLogout = () => {
     localStorage.removeItem("token");
