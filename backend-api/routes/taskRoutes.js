@@ -3,68 +3,51 @@ import Task from "../models/Task.js";
 import Project from "../models/Project.js";
 import { verifyToken, isAdmin } from "../middleware/authMiddleware.js";
 
-export default (io) => {
-  const router = express.Router();
+const router = express.Router();
 
-  // 🔹 Crear tarea dentro de un proyecto (solo admin)
-  router.post("/", verifyToken, isAdmin, async (req, res) => {
-    try {
-      const { titulo, descripcion, projectId } = req.body;
+// Crear tarea (solo admin)
+router.post("/", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { titulo, descripcion, projectId } = req.body;
 
-      if (!titulo || !projectId) {
-        return res
-          .status(400)
-          .json({ message: "Faltan campos obligatorios: título o projectId" });
-      }
+    if (!titulo || !projectId)
+      return res.status(400).json({ message: "Faltan campos obligatorios" });
 
-      const project = await Project.findById(projectId);
-      if (!project) {
-        return res.status(404).json({ message: "Proyecto no encontrado" });
-      }
+    const project = await Project.findById(projectId);
+    if (!project)
+      return res.status(404).json({ message: "Proyecto no encontrado" });
 
-      // Crear la nueva tarea
-      const newTask = new Task({
-        titulo,
-        descripcion,
-        projectId,
-        completada: false,
-        fechaCreacion: new Date(),
-      });
+    const newTask = new Task({ titulo, descripcion, projectId });
+    await newTask.save();
 
-      const savedTask = await newTask.save();
+    project.tareas.push(newTask._id);
+    await project.save();
 
-      // Agregar referencia en el proyecto
-      if (!project.tareas) project.tareas = [];
-      project.tareas.push(savedTask._id);
-      await project.save();
+    res.status(201).json(newTask);
+  } catch (err) {
+    console.error("Error al crear tarea:", err);
+    res.status(500).json({ message: "Error al crear tarea" });
+  }
+});
 
-      // Emitir evento de tarea nueva a todos los sockets conectados
-      io.emit("nuevaTarea", {
-        projectId,
-        titulo: savedTask.titulo,
-        descripcion: savedTask.descripcion,
-      });
+// Marcar tarea como completada (operador)
+router.put("/:id/complete", verifyToken, async (req, res) => {
+  try {
+    const { evidencia } = req.body;
+    const task = await Task.findById(req.params.id);
 
-      res.status(201).json(savedTask);
-    } catch (err) {
-      console.error("❌ Error al crear tarea:", err);
-      res.status(500).json({
-        message: "Error interno al crear la tarea",
-        error: err.message,
-      });
-    }
-  });
+    if (!task) return res.status(404).json({ message: "Tarea no encontrada" });
 
-  // 🔹 Obtener todas las tareas de un proyecto
-  router.get("/:projectId", verifyToken, async (req, res) => {
-    try {
-      const tasks = await Task.find({ projectId: req.params.projectId });
-      res.json(tasks);
-    } catch (error) {
-      console.error("❌ Error al obtener tareas:", error);
-      res.status(500).json({ message: "Error al obtener tareas" });
-    }
-  });
+    task.completada = true;
+    task.evidencia = evidencia || "Sin evidencia adjunta";
+    task.completadaPor = req.user.id;
 
-  return router;
-};
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    console.error("Error al completar tarea:", err);
+    res.status(500).json({ message: "Error al completar tarea" });
+  }
+});
+
+export default router;
