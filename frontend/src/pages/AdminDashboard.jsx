@@ -4,126 +4,214 @@ import { useNavigate } from "react-router-dom";
 export default function AdminDashboard() {
   const nav = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL;
+
   const [proyectos, setProyectos] = useState([]);
   const [nuevoProyecto, setNuevoProyecto] = useState("");
-  const [nuevaTarea, setNuevaTarea] = useState({ titulo: "", descripcion: "", projectId: "" });
+  const [tareasPorProyecto, setTareasPorProyecto] = useState({});
 
-  useEffect(() => { cargarProyectos(); }, []);
+  useEffect(() => {
+    cargarProyectos();
+  }, []);
 
   const cargarProyectos = async () => {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${API_URL}/projects`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    setProyectos(data);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/projects`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setProyectos(data);
+    } catch (error) {
+      console.error("Error al cargar proyectos:", error);
+    }
   };
 
   const crearProyecto = async () => {
-    const token = localStorage.getItem("token");
-    await fetch(`${API_URL}/projects`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: nuevoProyecto }),
-    });
-    setNuevoProyecto("");
-    cargarProyectos();
+    if (!nuevoProyecto.trim()) return alert("Por favor ingresa un nombre.");
+    try {
+      const res = await fetch(`${API_URL}/projects`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ name: nuevoProyecto }),
+      });
+      if (res.ok) {
+        setNuevoProyecto("");
+        cargarProyectos();
+      } else {
+        const err = await res.json();
+        alert(err.error || "Error al crear proyecto");
+      }
+    } catch (error) {
+      console.error("Error al crear proyecto:", error);
+    }
   };
 
-  const crearTarea = async () => {
-    const token = localStorage.getItem("token");
-    await fetch(`${API_URL}/tasks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(nuevaTarea),
-    });
-    setNuevaTarea({ titulo: "", descripcion: "", projectId: "" });
-    cargarProyectos();
+  const cargarTareas = async (projectId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/tasks/${projectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setTareasPorProyecto((prev) => ({ ...prev, [projectId]: data }));
+    } catch (error) {
+      console.error("Error al cargar tareas:", error);
+    }
+  };
+
+  const crearTarea = async (projectId) => {
+    const titulo = prompt("Título de la tarea:");
+    const descripcion = prompt("Descripción (opcional):");
+    if (!titulo) return;
+    try {
+      const res = await fetch(`${API_URL}/tasks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ titulo, descripcion, projectId }),
+      });
+      if (res.ok) {
+        alert("Tarea creada correctamente");
+        cargarTareas(projectId);
+      } else {
+        const err = await res.json();
+        alert(err.message || "Error al crear tarea");
+      }
+    } catch (error) {
+      console.error("Error al crear tarea:", error);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    nav("/login");
   };
 
   return (
-    <div className="container py-4">
-      <h2 className="mb-4">Panel del Administrador</h2>
+    <div className="container-fluid py-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="fw-bold text-success">Panel de Administración</h2>
+        <button className="btn btn-outline-danger" onClick={handleLogout}>
+          Cerrar Sesión
+        </button>
+      </div>
 
-      <div className="card p-3 mb-4">
-        <h5>Crear nuevo proyecto</h5>
+      <div className="card shadow-sm p-4 mb-4 border-0">
+        <h5 className="fw-semibold text-success mb-3">Crear nuevo proyecto</h5>
         <div className="d-flex">
           <input
-            className="form-control me-2"
+            type="text"
             placeholder="Nombre del proyecto"
+            className="form-control me-2"
             value={nuevoProyecto}
             onChange={(e) => setNuevoProyecto(e.target.value)}
           />
-          <button className="btn btn-success" onClick={crearProyecto}>Crear</button>
+          <button className="btn btn-success" onClick={crearProyecto}>
+            Crear
+          </button>
         </div>
       </div>
 
-      <div className="card p-3 mb-4">
-        <h5>Asignar tarea a un proyecto</h5>
-        <div className="row g-2">
-          <div className="col-md-3">
-            <input
-              className="form-control"
-              placeholder="Título"
-              value={nuevaTarea.titulo}
-              onChange={(e) => setNuevaTarea({ ...nuevaTarea, titulo: e.target.value })}
-            />
-          </div>
-          <div className="col-md-4">
-            <input
-              className="form-control"
-              placeholder="Descripción"
-              value={nuevaTarea.descripcion}
-              onChange={(e) => setNuevaTarea({ ...nuevaTarea, descripcion: e.target.value })}
-            />
-          </div>
-          <div className="col-md-3">
-            <select
-              className="form-select"
-              value={nuevaTarea.projectId}
-              onChange={(e) => setNuevaTarea({ ...nuevaTarea, projectId: e.target.value })}
-            >
-              <option value="">Seleccionar proyecto</option>
+      <div className="card shadow-sm p-4 border-0">
+        <h5 className="fw-semibold text-success mb-3">Proyectos actuales</h5>
+        {proyectos.length === 0 ? (
+          <div className="alert alert-secondary">No hay proyectos registrados.</div>
+        ) : (
+          <table className="table align-middle table-hover">
+            <thead>
+              <tr className="table-success text-center">
+                <th>Nombre</th>
+                <th>Creado por</th>
+                <th>Tareas</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
               {proyectos.map((p) => (
-                <option key={p._id} value={p._id}>{p.name}</option>
+                <React.Fragment key={p._id}>
+                  <tr className="text-center">
+                    <td>{p.name}</td>
+                    <td>{p.createdBy?.name || "Desconocido"}</td>
+                    <td>{p.tareas?.length || 0}</td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-outline-success me-2"
+                        onClick={() => crearTarea(p._id)}
+                      >
+                        Añadir tarea
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => cargarTareas(p._id)}
+                      >
+                        Ver tareas
+                      </button>
+                    </td>
+                  </tr>
+                  {tareasPorProyecto[p._id] && (
+                    <tr>
+                      <td colSpan="4">
+                        <table className="table table-bordered mt-2">
+                          <thead className="table-light">
+                            <tr>
+                              <th>Título</th>
+                              <th>Descripción</th>
+                              <th>Estado</th>
+                              <th>Evidencia</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tareasPorProyecto[p._id].length === 0 ? (
+                              <tr>
+                                <td colSpan="4" className="text-center text-muted">
+                                  No hay tareas para este proyecto
+                                </td>
+                              </tr>
+                            ) : (
+                              tareasPorProyecto[p._id].map((t) => (
+                                <tr key={t._id}>
+                                  <td>{t.titulo}</td>
+                                  <td>{t.descripcion || "Sin descripción"}</td>
+                                  <td>
+                                    {t.completada ? (
+                                      <span className="badge bg-success">Completada</span>
+                                    ) : (
+                                      <span className="badge bg-warning text-dark">Pendiente</span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    {t.evidencia ? (
+                                      <a
+                                        href={t.evidencia}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-success"
+                                      >
+                                        Ver evidencia
+                                      </a>
+                                    ) : (
+                                      "Sin evidencia"
+                                    )}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
-            </select>
-          </div>
-          <div className="col-md-2">
-            <button className="btn btn-primary w-100" onClick={crearTarea}>Añadir</button>
-          </div>
-        </div>
+            </tbody>
+          </table>
+        )}
       </div>
-
-      <h5>Lista de proyectos</h5>
-      <table className="table table-bordered table-striped mt-3">
-        <thead>
-          <tr>
-            <th>Proyecto</th>
-            <th>Creado por</th>
-            <th>Tareas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {proyectos.map((p) => (
-            <tr key={p._id}>
-              <td>{p.name}</td>
-              <td>{p.createdBy?.name || "Desconocido"}</td>
-              <td>
-                {p.tareas?.length ? (
-                  <ul className="mb-0">
-                    {p.tareas.map((t) => (
-                      <li key={t._id}>
-                        {t.titulo} - {t.completada ? "Completada" : "Pendiente"}
-                      </li>
-                    ))}
-                  </ul>
-                ) : "Sin tareas"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }

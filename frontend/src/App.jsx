@@ -1,7 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { SocketProvider } from "./contexts/SocketContext";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import OperatorDashboard from "./pages/OperatorDashboard";
@@ -14,7 +13,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <SocketProvider>
           <Routes>
             {/* Redirección base */}
             <Route path="/" element={<Navigate to="/login" />} />
@@ -62,7 +60,6 @@ export default function App() {
               }
             />
           </Routes>
-        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );
