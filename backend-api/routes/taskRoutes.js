@@ -3,41 +3,68 @@ import Task from "../models/Task.js";
 import Project from "../models/Project.js";
 import { verifyToken, isAdmin } from "../middleware/authMiddleware.js";
 
+export default (io) => {
+  const router = express.Router();
 
-const router = express.Router();
+  // 🔹 Crear tarea dentro de un proyecto (solo admin)
+  router.post("/", verifyToken, isAdmin, async (req, res) => {
+    try {
+      const { titulo, descripcion, projectId } = req.body;
 
-// 🔹 Crear tarea dentro de un proyecto (solo admin)
-router.post("/", verifyToken, async (req, res) => {
-  try {
-    const { titulo, descripcion, projectId } = req.body;
+      if (!titulo || !projectId) {
+        return res
+          .status(400)
+          .json({ message: "Faltan campos obligatorios: título o projectId" });
+      }
 
-    if (!titulo || !projectId)
-      return res.status(400).json({ message: "Faltan campos obligatorios" });
+      const project = await Project.findById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Proyecto no encontrado" });
+      }
 
-    const project = await Project.findById(projectId);
-    if (!project) return res.status(404).json({ message: "Proyecto no encontrado" });
+      // Crear la nueva tarea
+      const newTask = new Task({
+        titulo,
+        descripcion,
+        projectId,
+        completada: false,
+        fechaCreacion: new Date(),
+      });
 
-    const newTask = new Task({ titulo, descripcion, projectId });
-    await newTask.save();
+      const savedTask = await newTask.save();
 
-    // 🔗 Añadimos referencia al proyecto
-    project.tareas.push(newTask._id);
-    await project.save();
+      // Agregar referencia en el proyecto
+      if (!project.tareas) project.tareas = [];
+      project.tareas.push(savedTask._id);
+      await project.save();
 
-    res.status(201).json(newTask);
-  } catch (err) {
-    res.status(500).json({ message: "Error al crear tarea", error: err.message });
-  }
-});
+      // Emitir evento de tarea nueva a todos los sockets conectados
+      io.emit("nuevaTarea", {
+        projectId,
+        titulo: savedTask.titulo,
+        descripcion: savedTask.descripcion,
+      });
 
-// 🔹 Obtener todas las tareas de un proyecto
-router.get("/:projectId", verifyToken, async (req, res) => {
-  try {
-    const tasks = await Task.find({ projectId: req.params.projectId });
-    res.json(tasks);
-  } catch {
-    res.status(500).json({ message: "Error al obtener tareas" });
-  }
-});
+      res.status(201).json(savedTask);
+    } catch (err) {
+      console.error("❌ Error al crear tarea:", err);
+      res.status(500).json({
+        message: "Error interno al crear la tarea",
+        error: err.message,
+      });
+    }
+  });
 
-export default (io) => router;
+  // 🔹 Obtener todas las tareas de un proyecto
+  router.get("/:projectId", verifyToken, async (req, res) => {
+    try {
+      const tasks = await Task.find({ projectId: req.params.projectId });
+      res.json(tasks);
+    } catch (error) {
+      console.error("❌ Error al obtener tareas:", error);
+      res.status(500).json({ message: "Error al obtener tareas" });
+    }
+  });
+
+  return router;
+};

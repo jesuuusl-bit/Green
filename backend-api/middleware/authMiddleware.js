@@ -5,7 +5,7 @@ dotenv.config();
 
 /**
  * ✅ Middleware principal para proteger rutas con JWT
- * Se usa como:  router.get("/ruta", verifyToken, controlador)
+ * Asegura que el token incluya id y role del usuario.
  */
 export const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -18,7 +18,15 @@ export const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // guarda los datos del usuario (id, rol, etc.)
+
+    // 🔹 Aseguramos que se guarden correctamente los campos del usuario
+    req.user = {
+      id: decoded.id || decoded._id, // soporta ambas formas
+      role: decoded.role || "operator", // valor por defecto
+      email: decoded.email || null,
+      name: decoded.name || null,
+    };
+
     next();
   } catch (error) {
     console.error("❌ Token inválido:", error);
@@ -27,15 +35,15 @@ export const verifyToken = (req, res, next) => {
 };
 
 /**
- * 🔒 Middleware adicional para validar rol de administrador
- * Se usa junto a verifyToken:
- *   router.post("/crear", verifyToken, isAdmin, controlador)
+ * 🔒 Middleware para validar que el usuario sea administrador
  */
 export const isAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== "admin") {
     return res
       .status(403)
-      .json({ error: "Acceso denegado. Solo administradores pueden realizar esta acción." });
+      .json({
+        error: "Acceso denegado. Solo administradores pueden realizar esta acción.",
+      });
   }
   next();
 };
