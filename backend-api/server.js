@@ -1,6 +1,5 @@
 import express from "express";
 import http from "http";
-import { Server } from "socket.io";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -39,6 +38,7 @@ app.use((req, res, next) => {
 app.options("*", (req, res) => res.sendStatus(200));
 
 app.use(express.json());
+app.use(cors());
 
 // 🧠 Conexión a MongoDB
 mongoose
@@ -46,32 +46,11 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("✅ MongoDB conectado en backend-api"))
-  .catch((err) => console.error("❌ Error MongoDB:", err));
-
-// 🧩 Configuración Socket.io
-const io = new Server(server, {
-  cors: {
-    origin: [
-      "http://localhost:5173",
-      /\.vercel\.app$/,
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-  },
-});
-
-// 🔌 Eventos socket
-io.on("connection", (socket) => {
-  console.log("🟢 Cliente conectado:", socket.id);
-
-  socket.on("disconnect", () => {
-    console.log("🔴 Cliente desconectado:", socket.id);
-  });
-});
+  .then(() => console.log("✅ MongoDB conectado en backend-api"))  .catch((err) => console.error("❌ Error MongoDB:", err));
 
 // 🧭 Rutas principales
-app.use("/api/tasks", taskRoutes(io));
-app.use("/api/projects", projectRoutes(io));
+app.use("/api/tasks", taskRoutes);
+app.use("/api/projects", projectRoutes);
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, "0.0.0.0", () =>
