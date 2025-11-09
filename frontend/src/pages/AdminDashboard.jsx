@@ -10,6 +10,7 @@ export default function AdminDashboard() {
   const [proyectos, setProyectos] = useState([]);
   const [nuevoProyecto, setNuevoProyecto] = useState("");
   const [notificaciones, setNotificaciones] = useState([]);
+  const [nuevaTarea, setNuevaTarea] = useState({ titulo: "", descripcion: "" });
 
   useEffect(() => {
     cargarProyectos();
@@ -41,38 +42,64 @@ export default function AdminDashboard() {
   };
 
   // 🔹 Crear nuevo proyecto
-const crearProyecto = async () => {
-  if (!nuevoProyecto.trim()) return alert("Por favor ingresa un nombre.");
+  const crearProyecto = async () => {
+    if (!nuevoProyecto.trim()) return alert("Por favor ingresa un nombre.");
 
-  try {
-    const res = await fetch(`${API_URL}/projects`, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({ name: nuevoProyecto }),
-    });
+    try {
+      const res = await fetch(`${API_URL}/projects`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ name: nuevoProyecto }),
+      });
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error("❌ Error del backend:", errorText);
-      return alert("Error al crear el proyecto. Revisa la consola.");
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("❌ Error del backend:", errorText);
+        return alert("Error al crear el proyecto. Revisa la consola.");
+      }
+
+      const nuevo = await res.json();
+      setProyectos((prev) => [...prev, nuevo]);
+      setNuevoProyecto("");
+      socket?.emit("nuevoProyecto", { name: nuevo.name });
+    } catch (error) {
+      console.error("❌ Error al crear proyecto:", error);
+      alert("Error al conectar con el servidor.");
     }
+  };
 
-    // Esperar respuesta JSON del backend
-    const nuevo = await res.json();
-    console.log("✅ Proyecto creado:", nuevo);
+  // 🔹 Crear tarea dentro de un proyecto
+  const crearTarea = async (projectId) => {
+    if (!nuevaTarea.titulo.trim()) return alert("Escribe un título para la tarea.");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/tasks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          titulo: nuevaTarea.titulo,
+          descripcion: nuevaTarea.descripcion,
+          projectId,
+        }),
+      });
 
-    // Actualizar la lista local sin romper la UI
-    setProyectos((prev) => [...prev, nuevo]);
-    setNuevoProyecto("");
-    socket?.emit("nuevoProyecto", { name: nuevo.name });
-  } catch (error) {
-    console.error("❌ Error al crear proyecto:", error);
-    alert("Error al conectar con el servidor.");
-  }
-};
+      if (res.ok) {
+        alert("✅ Tarea creada correctamente");
+        setNuevaTarea({ titulo: "", descripcion: "" });
+        cargarProyectos();
+      } else {
+        alert("❌ Error al crear tarea");
+      }
+    } catch (err) {
+      console.error("Error al crear tarea:", err);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -106,7 +133,7 @@ const crearProyecto = async () => {
         </button>
       </aside>
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="flex-grow-1 p-5 overflow-auto">
         <h2 className="text-success fw-bold">👋 Bienvenido, Administrador</h2>
         <p className="text-muted">
@@ -144,11 +171,36 @@ const crearProyecto = async () => {
                     <p className="text-muted small mb-2">
                       {p.tareas?.length || 0} tareas asignadas
                     </p>
+
+                    {/* 🔹 Crear tarea */}
+                    <input
+                      type="text"
+                      placeholder="Título de la tarea"
+                      value={nuevaTarea.titulo}
+                      onChange={(e) =>
+                        setNuevaTarea((prev) => ({
+                          ...prev,
+                          titulo: e.target.value,
+                        }))
+                      }
+                      className="form-control mb-2"
+                    />
+                    <textarea
+                      placeholder="Descripción"
+                      value={nuevaTarea.descripcion}
+                      onChange={(e) =>
+                        setNuevaTarea((prev) => ({
+                          ...prev,
+                          descripcion: e.target.value,
+                        }))
+                      }
+                      className="form-control mb-2"
+                    ></textarea>
                     <button
-                      className="btn btn-outline-success btn-sm"
-                      onClick={() => nav(`/admin/project/${p._id}`)}
+                      className="btn btn-success btn-sm w-100"
+                      onClick={() => crearTarea(p._id)}
                     >
-                      Ver Detalles
+                      ➕ Añadir tarea
                     </button>
                   </div>
                 </div>

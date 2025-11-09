@@ -2,38 +2,28 @@ import mongoose from "mongoose";
 
 const taskSchema = new mongoose.Schema(
   {
-    title: {
+    titulo: {
       type: String,
-      required: [true, "El título de la tarea es obligatorio"],
+      required: true,
+      trim: true,
     },
-    description: {
+    descripcion: {
       type: String,
-    },
-    status: {
-      type: String,
-      enum: ["pendiente", "en progreso", "completada"],
-      default: "pendiente",
     },
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
       required: true,
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+    completada: {
+      type: Boolean,
+      default: false,
     },
-    completedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-    evidence: {
-      type: String, // puede ser una URL o base64
+    evidenciaUrl: {
+      type: String, // aquí se guarda la URL de la evidencia (más adelante usaremos uploads o Cloudinary)
     },
   },
   { timestamps: true }
 );
 
-const Task = mongoose.model("Task", taskSchema);
-export default Task;
+export default mongoose.model("Task", taskSchema);
